@@ -1,4 +1,4 @@
-package com.example.campushub
+package com.example.campus_hub
 
 import android.content.Intent
 import android.os.Bundle

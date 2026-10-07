@@ -6,13 +6,18 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.google.firebase.auth.FirebaseAuth
 
 class LoginActivity : AppCompatActivity() {
+
+    private lateinit var auth: FirebaseAuth
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_login)
+
+        auth = FirebaseAuth.getInstance()
 
         val edtEmail = findViewById<EditText>(R.id.edtEmail)
         val edtSenha = findViewById<EditText>(R.id.edtSenha)
@@ -21,61 +26,69 @@ class LoginActivity : AppCompatActivity() {
         val btnRecuperar = findViewById<Button>(R.id.btnRecuperar)
         val btnCriarConta = findViewById<Button>(R.id.btnCriarConta)
 
-        val session = SessionManager(this)
-
         btnEntrar.setOnClickListener {
 
             val email = edtEmail.text.toString().trim()
             val senha = edtSenha.text.toString()
 
             if (email.isEmpty() || senha.isEmpty()) {
-
                 Toast.makeText(
                     this,
                     "Preencha todos os campos",
                     Toast.LENGTH_SHORT
                 ).show()
-
                 return@setOnClickListener
             }
 
-            if (session.validarLogin(email, senha)) {
+            btnEntrar.isEnabled = false
 
-                session.login()
+            auth.signInWithEmailAndPassword(email, senha)
+                .addOnSuccessListener {
 
-                Toast.makeText(
-                    this,
-                    "Login realizado com sucesso!",
-                    Toast.LENGTH_SHORT
-                ).show()
+                    Toast.makeText(
+                        this,
+                        "Login realizado com sucesso!",
+                        Toast.LENGTH_SHORT
+                    ).show()
 
-                startActivity(
-                    Intent(this, HomeActivity::class.java)
-                )
+                    startActivity(
+                        Intent(
+                            this,
+                            HomeActivity::class.java
+                        )
+                    )
 
-                finish()
+                    finish()
+                }
+                .addOnFailureListener { erro ->
 
-            } else {
+                    btnEntrar.isEnabled = true
 
-                Toast.makeText(
-                    this,
-                    "E-mail ou senha incorretos",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
+                    Toast.makeText(
+                        this,
+                        "Erro no login: ${erro.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
         }
 
         btnRecuperar.setOnClickListener {
 
             startActivity(
-                Intent(this, ForgotPasswordActivity::class.java)
+                Intent(
+                    this,
+                    ForgotPasswordActivity::class.java
+                )
             )
         }
 
         btnCriarConta.setOnClickListener {
 
             startActivity(
-                Intent(this, RegisterActivity::class.java)
+                Intent(
+                    this,
+                    RegisterActivity::class.java
+                )
             )
         }
     }

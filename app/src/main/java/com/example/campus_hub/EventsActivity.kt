@@ -28,7 +28,29 @@ class EventsActivity : AppCompatActivity() {
         EventRepository.carregarEventos(
             onSuccess = { eventos ->
 
+                if (eventos.isEmpty()) {
+                    EventRepository.salvarEventosNoFirebase(
+                        onSuccess = {
+                            carregarEventos()
+                        },
+                        onFailure = { erro ->
+                            Toast.makeText(
+                                this,
+                                "Erro ao criar eventos: ${erro.message}",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    )
+
+                    return@carregarEventos
+                }
+
                 runOnUiThread {
+
+                    layoutEventos.removeViews(
+                        2,
+                        layoutEventos.childCount - 2
+                    )
 
                     eventos.sortedBy { it.id }.forEach { evento ->
 
@@ -41,7 +63,10 @@ class EventsActivity : AppCompatActivity() {
 
                         titulo.text = evento.titulo
                         titulo.textSize = 21f
-                        titulo.setTypeface(null, android.graphics.Typeface.BOLD)
+                        titulo.setTypeface(
+                            null,
+                            android.graphics.Typeface.BOLD
+                        )
 
                         val informacoes = TextView(this)
 
@@ -84,7 +109,10 @@ class EventsActivity : AppCompatActivity() {
 
                         parametros.setMargins(0, 0, 0, 20)
 
-                        layoutEventos.addView(card, parametros)
+                        layoutEventos.addView(
+                            card,
+                            parametros
+                        )
                     }
                 }
             },

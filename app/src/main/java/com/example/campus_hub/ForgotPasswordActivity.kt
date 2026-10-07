@@ -1,81 +1,68 @@
 package com.example.campus_hub
 
-import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.google.firebase.auth.FirebaseAuth
 
 class ForgotPasswordActivity : AppCompatActivity() {
+
+    private lateinit var auth: FirebaseAuth
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_forgot_password)
 
+        auth = FirebaseAuth.getInstance()
+
         val edtEmail =
             findViewById<EditText>(R.id.edtEmail)
-
-        val edtNovaSenha =
-            findViewById<EditText>(R.id.edtNovaSenha)
 
         val btnAlterarSenha =
             findViewById<Button>(R.id.btnAlterarSenha)
 
-        val session = SessionManager(this)
-
         btnAlterarSenha.setOnClickListener {
 
-            val email = edtEmail.text.toString().trim()
-            val novaSenha = edtNovaSenha.text.toString()
+            val email =
+                edtEmail.text.toString().trim()
 
-            if (email.isEmpty() || novaSenha.isEmpty()) {
+            if (email.isEmpty()) {
 
                 Toast.makeText(
                     this,
-                    "Preencha todos os campos",
+                    "Digite seu e-mail",
                     Toast.LENGTH_SHORT
                 ).show()
 
                 return@setOnClickListener
             }
 
-            if (!session.usuarioExiste()) {
+            btnAlterarSenha.isEnabled = false
 
-                Toast.makeText(
-                    this,
-                    "Nenhuma conta cadastrada",
-                    Toast.LENGTH_SHORT
-                ).show()
+            auth.sendPasswordResetEmail(email)
+                .addOnSuccessListener {
 
-                return@setOnClickListener
-            }
+                    Toast.makeText(
+                        this,
+                        "E-mail de recuperação enviado!",
+                        Toast.LENGTH_LONG
+                    ).show()
 
-            if (email != session.recuperarEmail()) {
+                    btnAlterarSenha.isEnabled = true
+                }
+                .addOnFailureListener { erro ->
 
-                Toast.makeText(
-                    this,
-                    "E-mail não encontrado",
-                    Toast.LENGTH_SHORT
-                ).show()
+                    btnAlterarSenha.isEnabled = true
 
-                return@setOnClickListener
-            }
-
-            session.atualizarSenha(novaSenha)
-
-            Toast.makeText(
-                this,
-                "Senha alterada com sucesso!",
-                Toast.LENGTH_SHORT
-            ).show()
-
-            startActivity(
-                Intent(this, LoginActivity::class.java)
-            )
-
-            finish()
+                    Toast.makeText(
+                        this,
+                        "Erro: ${erro.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
         }
     }
 }

@@ -1,104 +1,101 @@
 package com.example.campus_hub
 
 import android.content.Intent
-import android.graphics.Typeface
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 
 class EventsActivity : AppCompatActivity() {
+
+    private lateinit var layoutEventos: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_events)
 
-        val layoutEventos =
-            findViewById<LinearLayout>(R.id.layoutEventos)
+        layoutEventos = findViewById(R.id.layoutEventos)
 
-        for (evento in EventRepository.eventos) {
+        carregarEventos()
+    }
 
-            val titulo = TextView(this)
+    private fun carregarEventos() {
 
-            titulo.text = evento.titulo
-            titulo.textSize = 20f
-            titulo.setTypeface(null, Typeface.BOLD)
+        EventRepository.carregarEventos(
+            onSuccess = { eventos ->
 
-            val data = TextView(this)
+                runOnUiThread {
 
-            data.text =
-                "${evento.data} às ${evento.horario}"
+                    eventos.sortedBy { it.id }.forEach { evento ->
 
-            data.textSize = 15f
+                        val card = LinearLayout(this)
 
-            val local = TextView(this)
+                        card.orientation = LinearLayout.VERTICAL
+                        card.setPadding(20, 20, 20, 20)
 
-            local.text =
-                "Local: ${evento.local}"
+                        val titulo = TextView(this)
 
-            local.textSize = 15f
+                        titulo.text = evento.titulo
+                        titulo.textSize = 21f
+                        titulo.setTypeface(null, android.graphics.Typeface.BOLD)
 
-            val botao = Button(this)
+                        val informacoes = TextView(this)
 
-            botao.text = "Ver detalhes"
+                        informacoes.text =
+                            "Data: ${evento.data}\n" +
+                                    "Horário: ${evento.horario}\n" +
+                                    "Local: ${evento.local}\n" +
+                                    "Organizador: ${evento.organizador}"
 
-            botao.gravity = Gravity.CENTER
+                        informacoes.textSize = 16f
+                        informacoes.setPadding(0, 10, 0, 10)
 
-            botao.setOnClickListener {
+                        val botao = Button(this)
 
-                val intent =
-                    Intent(
-                        this,
-                        EventDetailActivity::class.java
-                    )
+                        botao.text = "Ver detalhes"
 
-                intent.putExtra(
-                    "EVENT_ID",
-                    evento.id
-                )
+                        botao.setOnClickListener {
 
-                startActivity(intent)
+                            val intent = Intent(
+                                this,
+                                EventDetailActivity::class.java
+                            )
+
+                            intent.putExtra(
+                                "EVENT_ID",
+                                evento.id
+                            )
+
+                            startActivity(intent)
+                        }
+
+                        card.addView(titulo)
+                        card.addView(informacoes)
+                        card.addView(botao)
+
+                        val parametros = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+
+                        parametros.setMargins(0, 0, 0, 20)
+
+                        layoutEventos.addView(card, parametros)
+                    }
+                }
+            },
+            onFailure = { erro ->
+
+                Toast.makeText(
+                    this,
+                    "Erro ao carregar eventos: ${erro.message}",
+                    Toast.LENGTH_LONG
+                ).show()
             }
-
-            val card = LinearLayout(this)
-
-            card.orientation =
-                LinearLayout.VERTICAL
-
-            card.setPadding(
-                20,
-                20,
-                20,
-                20
-            )
-
-            card.addView(titulo)
-
-            card.addView(data)
-
-            card.addView(local)
-
-            card.addView(botao)
-
-            val parametros =
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-
-            parametros.setMargins(
-                0,
-                0,
-                0,
-                20
-            )
-
-            card.layoutParams = parametros
-
-            layoutEventos.addView(card)
-        }
+        )
     }
 }

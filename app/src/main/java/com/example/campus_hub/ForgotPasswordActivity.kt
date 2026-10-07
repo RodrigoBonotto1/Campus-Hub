@@ -9,60 +9,47 @@ import com.google.firebase.auth.FirebaseAuth
 
 class ForgotPasswordActivity : AppCompatActivity() {
 
-    private lateinit var auth: FirebaseAuth
+    private lateinit var edtEmail: EditText
+    private lateinit var btnAlterarSenha: Button
+
+    private val auth = FirebaseAuth.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContentView(R.layout.activity_forgot_password)
 
-        auth = FirebaseAuth.getInstance()
-
-        val edtEmail =
-            findViewById<EditText>(R.id.edtEmail)
-
-        val btnAlterarSenha =
-            findViewById<Button>(R.id.btnAlterarSenha)
+        edtEmail = findViewById(R.id.edtEmail)
+        btnAlterarSenha = findViewById(R.id.btnAlterarSenha)
 
         btnAlterarSenha.setOnClickListener {
+            recuperarSenha()
+        }
+    }
 
-            val email =
-                edtEmail.text.toString().trim()
+    private fun recuperarSenha() {
 
-            if (email.isEmpty()) {
+        val email = edtEmail.text.toString().trim()
 
+        if (email.isEmpty()) {
+            edtEmail.error = "Digite seu e-mail"
+            return
+        }
+
+        auth.sendPasswordResetEmail(email)
+            .addOnSuccessListener {
                 Toast.makeText(
                     this,
-                    "Digite seu e-mail",
-                    Toast.LENGTH_SHORT
+                    "Link de recuperação enviado para seu e-mail.",
+                    Toast.LENGTH_LONG
                 ).show()
-
-                return@setOnClickListener
+                finish()
             }
-
-            btnAlterarSenha.isEnabled = false
-
-            auth.sendPasswordResetEmail(email)
-                .addOnSuccessListener {
-
-                    Toast.makeText(
-                        this,
-                        "E-mail de recuperação enviado!",
-                        Toast.LENGTH_LONG
-                    ).show()
-
-                    btnAlterarSenha.isEnabled = true
-                }
-                .addOnFailureListener { erro ->
-
-                    btnAlterarSenha.isEnabled = true
-
-                    Toast.makeText(
-                        this,
-                        "Erro: ${erro.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-        }
+            .addOnFailureListener { erro ->
+                Toast.makeText(
+                    this,
+                    "Erro: ${erro.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
     }
 }

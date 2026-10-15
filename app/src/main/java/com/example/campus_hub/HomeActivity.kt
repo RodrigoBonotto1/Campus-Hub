@@ -25,8 +25,10 @@ class HomeActivity : AppCompatActivity() {
         val txtSaudacao = findViewById<TextView>(R.id.txtSaudacao)
         val btnEventos = findViewById<Button>(R.id.btnEventos)
         val btnMeusEventos = findViewById<Button>(R.id.btnMeusEventos)
+        val btnMeusFavoritos = findViewById<Button>(R.id.btnMeusFavoritos)
         val btnPerfil = findViewById<Button>(R.id.btnPerfil)
         val btnSair = findViewById<Button>(R.id.btnSair)
+
 
         val usuario = auth.currentUser
 
@@ -77,6 +79,9 @@ class HomeActivity : AppCompatActivity() {
 
             startActivity(Intent(this, MainActivity::class.java))
             finish()
+        }
+        btnMeusFavoritos.setOnClickListener {
+            startActivity(Intent(this, MeusFavoritosActivity::class.java))
         }
     }
 }

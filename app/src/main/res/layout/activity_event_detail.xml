@@ -66,6 +66,13 @@
             android:layout_height="wrap_content"
             android:text="Inscrever-se"/>
 
+        <Button
+            android:id="@+id/btnFavorito"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="♡ Adicionar aos favoritos" />
+
     </LinearLayout>
 
 </ScrollView>

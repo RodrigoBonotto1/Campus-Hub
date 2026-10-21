@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -58,7 +58,7 @@
             android:layout_height="wrap_content"
             android:text="Organizador"
             android:textSize="16sp"
-            android:layout_marginBottom="25dp"/>
+            android:layout_marginBottom="20dp"/>
 
         <Button
             android:id="@+id/btnInscricao"
@@ -71,8 +71,91 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:text="♡ Adicionar aos favoritos" />
+            android:text="♡ Adicionar aos favoritos"/>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#DDDDDD"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="20dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Comentários"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp"/>
+
+        <EditText
+            android:id="@+id/edtComentario"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="110dp"
+            android:gravity="top|start"
+            android:hint="Escreva seu comentário..."
+            android:inputType="textCapSentences|textMultiLine"
+            android:maxLength="2000"
+            android:padding="12dp"/>
+
+        <Button
+            android:id="@+id/btnPublicarComentario"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Publicar comentário"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="20dp"/>
+
+        <LinearLayout
+            android:id="@+id/layoutComentarios"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"/>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#DDDDDD"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="20dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Avaliações"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:id="@+id/txtMediaAvaliacoes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Avaliação média: ainda sem avaliações"
+            android:textSize="16sp"
+            android:layout_marginBottom="12dp"/>
+
+        <Spinner
+            android:id="@+id/spNota"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"/>
+
+        <Button
+            android:id="@+id/btnAvaliar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Salvar avaliação"
+            android:layout_marginTop="8dp"/>
+
+        <TextView
+            android:id="@+id/txtOrientacaoAvaliacao"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="A avaliação estará disponível após o encerramento do evento."
+            android:textSize="14sp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="16dp"/>
 
     </LinearLayout>
-
 </ScrollView>

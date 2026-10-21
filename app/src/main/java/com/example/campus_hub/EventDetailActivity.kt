@@ -8,6 +8,12 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import android.widget.EditText
+import android.widget.LinearLayout
+import com.google.firebase.firestore.FieldValue
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class EventDetailActivity : AppCompatActivity() {
 
@@ -19,6 +25,12 @@ class EventDetailActivity : AppCompatActivity() {
     private lateinit var txtOrganizador: TextView
     private lateinit var btnInscricao: Button
     private lateinit var btnFavorito: Button
+
+    private lateinit var edtComentario: EditText
+
+    private lateinit var btnPublicarComentario: Button
+
+    private lateinit var layoutComentarios: LinearLayout
 
     private val auth = FirebaseAuth.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
@@ -39,6 +51,13 @@ class EventDetailActivity : AppCompatActivity() {
         txtOrganizador = findViewById(R.id.txtOrganizador)
         btnInscricao = findViewById(R.id.btnInscricao)
         btnFavorito = findViewById(R.id.btnFavorito)
+        edtComentario = findViewById(R.id.edtComentario)
+        btnPublicarComentario = findViewById(R.id.btnPublicarComentario)
+        layoutComentarios = findViewById(R.id.layoutComentarios)
+
+        btnPublicarComentario.setOnClickListener {
+            publicarComentario()
+        }
 
         val eventId = intent.getIntExtra("EVENT_ID", -1)
 
@@ -224,5 +243,143 @@ class EventDetailActivity : AppCompatActivity() {
 
     private fun atualizarBotaoFavorito() {
         btnFavorito.text = if (favorito) "♥ Remover dos favoritos" else "♡ Adicionar aos favoritos"
+    }
+    private fun publicarComentario() {
+        val usuario = auth.currentUser
+        val eventoAtual = evento
+        val texto = edtComentario.text.toString().trim()
+
+        if (usuario == null) {
+            Toast.makeText(this, "Faça login para comentar", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        if (eventoAtual == null) {
+            Toast.makeText(this, "Evento ainda não carregado", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        if (texto.isEmpty()) {
+            edtComentario.error = "Digite um comentário"
+            return
+        }
+
+        btnPublicarComentario.isEnabled = false
+
+        firestore.collection("usuarios")
+            .document(usuario.uid)
+            .get()
+            .addOnSuccessListener { documento ->
+                val nome = documento.getString("nome")
+                    ?: usuario.displayName
+                    ?: usuario.email
+                    ?: "Usuário"
+
+                val dados = hashMapOf(
+                    "autorUid" to usuario.uid,
+                    "autorNome" to nome,
+                    "texto" to texto,
+                    "dataPublicacao" to FieldValue.serverTimestamp()
+                )
+
+                firestore.collection("eventos")
+                    .document(eventoAtual.id.toString())
+                    .collection("comentarios")
+                    .add(dados)
+                    .addOnSuccessListener {
+                        edtComentario.text.clear()
+                        Toast.makeText(
+                            this,
+                            "Comentário publicado com sucesso!",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        carregarComentarios()
+                    }
+                    .addOnFailureListener { erro ->
+                        Toast.makeText(
+                            this,
+                            "Erro ao publicar: ${erro.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    .addOnCompleteListener {
+                        btnPublicarComentario.isEnabled = true
+                    }
+            }
+            .addOnFailureListener { erro ->
+                btnPublicarComentario.isEnabled = true
+                Toast.makeText(
+                    this,
+                    "Erro ao buscar usuário: ${erro.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+    }
+
+    private fun carregarComentarios() {
+        val eventoAtual = evento ?: return
+
+        firestore.collection("eventos")
+            .document(eventoAtual.id.toString())
+            .collection("comentarios")
+            .get()
+            .addOnSuccessListener { resultado ->
+                layoutComentarios.removeAllViews()
+
+                for (documento in resultado.documents) {
+                    val nome = documento.getString("autorNome") ?: "Usuário"
+                    val texto = documento.getString("texto") ?: ""
+                    val data = documento.getTimestamp("dataPublicacao")
+                        ?.toDate()
+
+                    val dataFormatada = data?.let {
+                        SimpleDateFormat(
+                            "dd/MM/yyyy HH:mm",
+                            Locale.getDefault()
+                        ).format(it)
+                    } ?: "Data não disponível"
+
+                    val comentario = TextView(this).apply {
+                        text = "$nome • $dataFormatada\n$texto"
+                        textSize = 16f
+                        setPadding(0, 16, 0, 16)
+                    }
+
+                    layoutComentarios.addView(comentario)
+
+                    if (documento.getString("autorUid") == auth.currentUser?.uid) {
+                        val btnExcluir = Button(this).apply {
+                            text = "Excluir comentário"
+                            setOnClickListener {
+                                documento.reference.delete()
+                                    .addOnSuccessListener {
+                                        Toast.makeText(
+                                            this@EventDetailActivity,
+                                            "Comentário excluído",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                        carregarComentarios()
+                                    }
+                                    .addOnFailureListener { erro ->
+                                        Toast.makeText(
+                                            this@EventDetailActivity,
+                                            "Erro ao excluir: ${erro.message}",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                            }
+                        }
+
+                        layoutComentarios.addView(btnExcluir)
+                    }
+                }
+            }
+            .addOnFailureListener { erro ->
+                Toast.makeText(
+                    this,
+                    "Erro ao carregar comentários: ${erro.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
     }
 }

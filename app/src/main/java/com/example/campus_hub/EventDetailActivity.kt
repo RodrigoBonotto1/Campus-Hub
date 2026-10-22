@@ -14,6 +14,9 @@ import com.google.firebase.firestore.FieldValue
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import android.widget.Spinner
+import android.widget.ArrayAdapter
+import java.util.Calendar
 
 class EventDetailActivity : AppCompatActivity() {
 
@@ -39,6 +42,14 @@ class EventDetailActivity : AppCompatActivity() {
     private var inscrito = false
     private var favorito = false
 
+    private lateinit var txtMediaAvaliacoes: TextView
+
+    private lateinit var spNota: Spinner
+
+    private lateinit var btnAvaliar: Button
+
+    private lateinit var txtOrientacaoAvaliacao: TextView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_event_detail)
@@ -54,6 +65,22 @@ class EventDetailActivity : AppCompatActivity() {
         edtComentario = findViewById(R.id.edtComentario)
         btnPublicarComentario = findViewById(R.id.btnPublicarComentario)
         layoutComentarios = findViewById(R.id.layoutComentarios)
+        txtMediaAvaliacoes = findViewById(R.id.txtMediaAvaliacoes)
+        spNota = findViewById(R.id.spNota)
+        btnAvaliar = findViewById(R.id.btnAvaliar)
+        txtOrientacaoAvaliacao = findViewById(R.id.txtOrientacaoAvaliacao)
+
+        val notas = (1..5).map { "$it estrela${if (it > 1) "s" else ""}" }
+
+        spNota.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            notas
+        )
+
+        btnAvaliar.setOnClickListener {
+            salvarAvaliacao()
+        }
 
         btnPublicarComentario.setOnClickListener {
             publicarComentario()
@@ -94,6 +121,9 @@ class EventDetailActivity : AppCompatActivity() {
                 txtHorario.text = "Horário: ${eventoCarregado.horario}"
                 txtLocal.text = "Local: ${eventoCarregado.local}"
                 txtOrganizador.text = "Organizador: ${eventoCarregado.organizador}"
+                carregarComentarios()
+                carregarMediaAvaliacoes()
+                verificarPermissaoAvaliacao()
 
                 verificarInscricao(eventoCarregado.id)
                 verificarFavorito(eventoCarregado.id)
@@ -378,6 +408,211 @@ class EventDetailActivity : AppCompatActivity() {
                 Toast.makeText(
                     this,
                     "Erro ao carregar comentários: ${erro.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+    }
+    private fun eventoEncerrado(): Boolean {
+        val eventoAtual = evento ?: return false
+
+        val formatos = listOf("dd/MM/yyyy", "yyyy-MM-dd")
+
+        for (formato in formatos) {
+            try {
+                val sdf = SimpleDateFormat(formato, Locale.getDefault())
+                sdf.isLenient = false
+                val dataEvento = sdf.parse(eventoAtual.data) ?: continue
+
+                val hoje = Calendar.getInstance()
+                hoje.set(Calendar.HOUR_OF_DAY, 0)
+                hoje.set(Calendar.MINUTE, 0)
+                hoje.set(Calendar.SECOND, 0)
+                hoje.set(Calendar.MILLISECOND, 0)
+
+                return dataEvento.before(hoje.time)
+            } catch (_: Exception) {
+            }
+        }
+
+        return false
+    }
+
+    private fun verificarPermissaoAvaliacao() {
+        val usuario = auth.currentUser
+        val eventoAtual = evento
+
+        if (usuario == null || eventoAtual == null) {
+            btnAvaliar.isEnabled = false
+            txtOrientacaoAvaliacao.text = "Faça login para avaliar."
+            return
+        }
+
+        if (!eventoEncerrado()) {
+            btnAvaliar.isEnabled = false
+            txtOrientacaoAvaliacao.text =
+                "A avaliação estará disponível após o encerramento do evento."
+            return
+        }
+
+        firestore.collection("usuarios")
+            .document(usuario.uid)
+            .collection("inscricoes")
+            .document(eventoAtual.id.toString())
+            .get()
+            .addOnSuccessListener { documento ->
+                if (documento.exists()) {
+                    btnAvaliar.isEnabled = true
+                    txtOrientacaoAvaliacao.text =
+                        "Você pode avaliar este evento. Sua nota pode ser alterada depois."
+                    carregarMinhaAvaliacao()
+                } else {
+                    btnAvaliar.isEnabled = false
+                    txtOrientacaoAvaliacao.text =
+                        "Somente alunos inscritos podem avaliar este evento."
+                }
+            }
+            .addOnFailureListener { erro ->
+                btnAvaliar.isEnabled = false
+                txtOrientacaoAvaliacao.text =
+                    "Não foi possível verificar sua inscrição."
+                Toast.makeText(
+                    this,
+                    "Erro: ${erro.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+    }
+
+    private fun carregarMinhaAvaliacao() {
+        val usuario = auth.currentUser ?: return
+        val eventoAtual = evento ?: return
+
+        firestore.collection("eventos")
+            .document(eventoAtual.id.toString())
+            .collection("avaliacoes")
+            .document(usuario.uid)
+            .get()
+            .addOnSuccessListener { documento ->
+                val nota = documento.getLong("nota")?.toInt()
+
+                if (nota != null && nota in 1..5) {
+                    spNota.setSelection(nota - 1)
+                    btnAvaliar.text = "Alterar avaliação"
+                } else {
+                    btnAvaliar.text = "Enviar avaliação"
+                }
+            }
+    }
+
+    private fun salvarAvaliacao() {
+        val usuario = auth.currentUser
+        val eventoAtual = evento
+
+        if (usuario == null || eventoAtual == null) {
+            Toast.makeText(
+                this,
+                "Faça login para avaliar.",
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        if (!eventoEncerrado()) {
+            Toast.makeText(
+                this,
+                "Só é possível avaliar eventos encerrados.",
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        val nota = spNota.selectedItemPosition + 1
+
+        btnAvaliar.isEnabled = false
+
+        firestore.collection("usuarios")
+            .document(usuario.uid)
+            .collection("inscricoes")
+            .document(eventoAtual.id.toString())
+            .get()
+            .addOnSuccessListener { inscricao ->
+                if (!inscricao.exists()) {
+                    btnAvaliar.isEnabled = true
+                    Toast.makeText(
+                        this,
+                        "Você precisa estar inscrito no evento.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return@addOnSuccessListener
+                }
+
+                val dados = hashMapOf(
+                    "uid" to usuario.uid,
+                    "nota" to nota,
+                    "dataAvaliacao" to FieldValue.serverTimestamp()
+                )
+
+                firestore.collection("eventos")
+                    .document(eventoAtual.id.toString())
+                    .collection("avaliacoes")
+                    .document(usuario.uid)
+                    .set(dados)
+                    .addOnSuccessListener {
+                        Toast.makeText(
+                            this,
+                            "Avaliação salva com sucesso!",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        btnAvaliar.text = "Alterar avaliação"
+                        carregarMediaAvaliacoes()
+                    }
+                    .addOnFailureListener { erro ->
+                        Toast.makeText(
+                            this,
+                            "Erro ao salvar avaliação: ${erro.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    .addOnCompleteListener {
+                        btnAvaliar.isEnabled = true
+                    }
+            }
+            .addOnFailureListener { erro ->
+                btnAvaliar.isEnabled = true
+                Toast.makeText(
+                    this,
+                    "Erro ao verificar inscrição: ${erro.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+    }
+
+    private fun carregarMediaAvaliacoes() {
+        val eventoAtual = evento ?: return
+
+        firestore.collection("eventos")
+            .document(eventoAtual.id.toString())
+            .collection("avaliacoes")
+            .get()
+            .addOnSuccessListener { resultado ->
+                val notas = resultado.documents.mapNotNull {
+                    it.getLong("nota")?.toInt()?.takeIf { nota -> nota in 1..5 }
+                }
+
+                if (notas.isEmpty()) {
+                    txtMediaAvaliacoes.text = "Ainda não há avaliações."
+                } else {
+                    val media = notas.average()
+                    txtMediaAvaliacoes.text =
+                        "Média: ${"%.1f".format(Locale.getDefault(), media)} de 5 estrelas (${notas.size} avaliações)"
+                }
+            }
+            .addOnFailureListener { erro ->
+                txtMediaAvaliacoes.text = "Não foi possível carregar as avaliações."
+                Toast.makeText(
+                    this,
+                    "Erro ao carregar avaliações: ${erro.message}",
                     Toast.LENGTH_LONG
                 ).show()
             }

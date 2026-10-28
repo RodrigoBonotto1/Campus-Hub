@@ -113,6 +113,36 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"/>
 
+        <TextView
+            android:id="@+id/txtTituloFotos"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Fotos do evento"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="12dp" />
+
+        <Button
+            android:id="@+id/btnTirarFoto"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Tirar foto" />
+
+        <Button
+            android:id="@+id/btnEscolherFoto"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Escolher foto da galeria"
+            android:layout_marginTop="8dp" />
+
+        <LinearLayout
+            android:id="@+id/layoutFotos"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="16dp" />
+
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
@@ -172,6 +202,35 @@
             android:layout_height="wrap_content"
             android:text="Ver localização no mapa"
             android:layout_marginBottom="16dp" />
+        <TextView
+            android:id="@+id/txtTituloFotos"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Fotos do evento"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="12dp" />
+
+        <Button
+            android:id="@+id/btnTirarFoto"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Tirar foto" />
+
+        <Button
+            android:id="@+id/btnEscolherFoto"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Escolher foto da galeria"
+            android:layout_marginTop="8dp" />
+
+        <LinearLayout
+            android:id="@+id/layoutFotos"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="16dp" />
 
     </LinearLayout>
 </ScrollView>

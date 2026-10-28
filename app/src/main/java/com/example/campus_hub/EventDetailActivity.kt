@@ -18,6 +18,12 @@ import android.widget.Spinner
 import android.widget.ArrayAdapter
 import java.util.Calendar
 import android.net.Uri
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.widget.ImageView
+import androidx.activity.result.contract.ActivityResultContracts
+import java.io.File
+import java.io.FileOutputStream
 
 class EventDetailActivity : AppCompatActivity() {
 
@@ -50,6 +56,19 @@ class EventDetailActivity : AppCompatActivity() {
     private lateinit var btnAvaliar: Button
 
     private lateinit var txtOrientacaoAvaliacao: TextView
+    private lateinit var btnTirarFoto: Button
+    private lateinit var btnEscolherFoto: Button
+    private lateinit var layoutFotos: LinearLayout
+
+    private val tirarFotoLauncher =
+        registerForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
+            if (bitmap != null) salvarFoto(bitmap)
+        }
+
+    private val escolherFotoLauncher =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            if (uri != null) salvarFotoDaGaleria(uri)
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,6 +89,25 @@ class EventDetailActivity : AppCompatActivity() {
         spNota = findViewById(R.id.spNota)
         btnAvaliar = findViewById(R.id.btnAvaliar)
         txtOrientacaoAvaliacao = findViewById(R.id.txtOrientacaoAvaliacao)
+        btnTirarFoto = findViewById(R.id.btnTirarFoto)
+        btnEscolherFoto = findViewById(R.id.btnEscolherFoto)
+        layoutFotos = findViewById(R.id.layoutFotos)
+
+        btnTirarFoto.setOnClickListener {
+            if (auth.currentUser == null) {
+                Toast.makeText(this, "Entre na sua conta para publicar fotos.", Toast.LENGTH_SHORT).show()
+            } else {
+                tirarFotoLauncher.launch(null)
+            }
+        }
+
+        btnEscolherFoto.setOnClickListener {
+            if (auth.currentUser == null) {
+                Toast.makeText(this, "Entre na sua conta para publicar fotos.", Toast.LENGTH_SHORT).show()
+            } else {
+                escolherFotoLauncher.launch("image/*")
+            }
+        }
 
         val notas = (1..5).map { "$it estrela${if (it > 1) "s" else ""}" }
 
@@ -153,6 +191,7 @@ class EventDetailActivity : AppCompatActivity() {
                 }
 
                 evento = eventoCarregado
+                carregarFotos()
                 txtTitulo.text = eventoCarregado.titulo
                 txtDescricao.text = eventoCarregado.descricao
                 txtData.text = "Data: ${eventoCarregado.data}"
@@ -450,6 +489,198 @@ class EventDetailActivity : AppCompatActivity() {
                 ).show()
             }
     }
+    private fun obterPastaFotos(): File? {
+        val eventoAtual = evento ?: return null
+        val pasta = File(filesDir, "fotos_eventos/${eventoAtual.id}")
+        if (!pasta.exists() && !pasta.mkdirs()) return null
+        return pasta
+    }
+
+    private fun salvarFoto(bitmap: Bitmap) {
+        if (auth.currentUser == null) {
+            Toast.makeText(this, "Entre na sua conta para publicar fotos.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val pasta = obterPastaFotos()
+        if (pasta == null) {
+            Toast.makeText(this, "Não foi possível acessar a pasta do evento.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val arquivo = File(pasta, "${System.currentTimeMillis()}.jpg")
+        try {
+            FileOutputStream(arquivo).use { saida ->
+                if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 90, saida)) {
+                    throw Exception("Falha ao converter a imagem.")
+                }
+            }
+            registrarFoto(arquivo)
+        } catch (e: Exception) {
+            arquivo.delete()
+            Toast.makeText(this, "Erro ao salvar a foto: ${e.message ?: "erro desconhecido"}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun salvarFotoDaGaleria(uri: Uri) {
+        if (auth.currentUser == null) {
+            Toast.makeText(this, "Entre na sua conta para publicar fotos.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val pasta = obterPastaFotos()
+        if (pasta == null) {
+            Toast.makeText(this, "Não foi possível acessar a pasta do evento.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val arquivo = File(pasta, "${System.currentTimeMillis()}.jpg")
+        try {
+            val bitmap = contentResolver.openInputStream(uri)?.use { entrada ->
+                BitmapFactory.decodeStream(entrada)
+            } ?: throw Exception("Não foi possível abrir a imagem.")
+
+            FileOutputStream(arquivo).use { saida ->
+                if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 90, saida)) {
+                    throw Exception("Falha ao converter a imagem.")
+                }
+            }
+            bitmap.recycle()
+            registrarFoto(arquivo)
+        } catch (e: Exception) {
+            arquivo.delete()
+            Toast.makeText(this, "Não foi possível importar a foto: ${e.message ?: "erro desconhecido"}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun registrarFoto(arquivo: File) {
+        val usuario = auth.currentUser ?: return
+        val eventoAtual = evento ?: return
+
+        referenciaUsuario()?.get()
+            ?.addOnSuccessListener { documento ->
+                val nome = documento.getString("nome")
+                    ?: usuario.displayName
+                    ?: usuario.email
+                    ?: "Usuário"
+                guardarDadosFoto(arquivo, usuario.uid, nome, eventoAtual.id)
+            }
+            ?.addOnFailureListener {
+                val nome = usuario.displayName ?: usuario.email ?: "Usuário"
+                guardarDadosFoto(arquivo, usuario.uid, nome, eventoAtual.id)
+            }
+            ?: run {
+                val nome = usuario.displayName ?: usuario.email ?: "Usuário"
+                guardarDadosFoto(arquivo, usuario.uid, nome, eventoAtual.id)
+            }
+    }
+
+    private fun guardarDadosFoto(arquivo: File, uid: String, nome: String, eventId: Int) {
+        val chave = "${eventId}_${arquivo.name}"
+        getSharedPreferences("fotos_eventos", MODE_PRIVATE).edit()
+            .putString("${chave}_autorUid", uid)
+            .putString("${chave}_autorNome", nome)
+            .putLong("${chave}_data", System.currentTimeMillis())
+            .apply()
+        carregarFotos()
+    }
+
+    private fun carregarBitmapReduzido(caminho: String): Bitmap? {
+        val opcoes = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(caminho, opcoes)
+        val maiorDimensao = maxOf(opcoes.outWidth, opcoes.outHeight)
+        var amostra = 1
+        while (maiorDimensao / amostra > 1200) amostra *= 2
+        val opcoesFinal = BitmapFactory.Options().apply { inSampleSize = amostra }
+        return BitmapFactory.decodeFile(caminho, opcoesFinal)
+    }
+
+    private fun carregarFotos() {
+        if (!::layoutFotos.isInitialized) return
+        val eventoAtual = evento ?: return
+        val pasta = obterPastaFotos() ?: return
+        val preferencias = getSharedPreferences("fotos_eventos", MODE_PRIVATE)
+        val usuarioUid = auth.currentUser?.uid
+
+        layoutFotos.removeAllViews()
+        val arquivos = pasta.listFiles()
+            ?.filter { it.isFile && it.extension.equals("jpg", ignoreCase = true) }
+            ?.sortedByDescending { it.lastModified() }
+            .orEmpty()
+
+        for (arquivo in arquivos) {
+            val chave = "${eventoAtual.id}_${arquivo.name}"
+            val autorUid = preferencias.getString("${chave}_autorUid", null) ?: continue
+            val autorNome = preferencias.getString("${chave}_autorNome", "Usuário") ?: "Usuário"
+            val data = preferencias.getLong("${chave}_data", arquivo.lastModified())
+            val item = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(0, 12, 0, 20)
+            }
+
+            val imagem = ImageView(this).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    240
+                )
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                contentDescription = "Foto publicada por $autorNome"
+                setImageBitmap(carregarBitmapReduzido(arquivo.absolutePath))
+            }
+
+            val textoAutor = TextView(this).apply {
+                text = "Publicado por: $autorNome"
+                textSize = 14f
+                setPadding(0, 8, 0, 2)
+            }
+
+            val textoData = TextView(this).apply {
+                text = "Data: ${SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(data))}"
+                textSize = 12f
+            }
+
+            item.addView(imagem)
+            item.addView(textoAutor)
+            item.addView(textoData)
+
+            if (usuarioUid != null && usuarioUid == autorUid) {
+                val btnExcluir = Button(this).apply {
+                    text = "Excluir minha foto"
+                    setOnClickListener { excluirFoto(arquivo, chave) }
+                }
+                item.addView(btnExcluir)
+            }
+
+            layoutFotos.addView(item)
+        }
+    }
+
+    private fun excluirFoto(arquivo: File, chave: String) {
+        val usuarioUid = auth.currentUser?.uid
+        if (usuarioUid == null) {
+            Toast.makeText(this, "Entre na sua conta para excluir uma foto.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val preferencias = getSharedPreferences("fotos_eventos", MODE_PRIVATE)
+        if (preferencias.getString("${chave}_autorUid", null) != usuarioUid) {
+            Toast.makeText(this, "Você só pode excluir suas próprias fotos.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (arquivo.delete()) {
+            preferencias.edit()
+                .remove("${chave}_autorUid")
+                .remove("${chave}_autorNome")
+                .remove("${chave}_data")
+                .apply()
+            carregarFotos()
+            Toast.makeText(this, "Foto excluída.", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Não foi possível excluir a foto.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun eventoEncerrado(): Boolean {
         val eventoAtual = evento ?: return false
 

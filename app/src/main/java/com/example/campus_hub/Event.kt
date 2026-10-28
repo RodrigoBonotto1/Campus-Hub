@@ -7,5 +7,6 @@ data class Event(
     val data: String,
     val horario: String,
     val local: String,
-    val organizador: String
+    val organizador: String,
+    val categoria: String = "Outros"
 )

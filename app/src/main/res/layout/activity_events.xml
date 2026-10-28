@@ -3,10 +3,10 @@
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:fillViewport="true">
 
     <LinearLayout
-        android:id="@+id/layoutEventos"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
@@ -18,14 +18,63 @@
             android:text="Eventos"
             android:textSize="30sp"
             android:textStyle="bold"
-            android:layout_marginBottom="8dp"/>
+            android:layout_marginBottom="8dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Confira os próximos eventos da universidade"
+            android:text="Encontre eventos da universidade"
             android:textSize="16sp"
-            android:layout_marginBottom="20dp"/>
+            android:layout_marginBottom="16dp" />
+
+        <EditText
+            android:id="@+id/edtBuscarEvento"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Buscar por título"
+            android:inputType="text"
+            android:singleLine="true"
+            android:layout_marginBottom="12dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Categoria"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/spFiltroCategoria"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Situação"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/spFiltroSituacao"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:id="@+id/txtSemResultados"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Nenhum evento encontrado."
+            android:textSize="16sp"
+            android:gravity="center"
+            android:padding="16dp"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/layoutListaEventos"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
 
     </LinearLayout>
 

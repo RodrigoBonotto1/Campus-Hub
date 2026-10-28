@@ -54,6 +54,21 @@ object EventRepository {
 
     private val firestore = FirebaseFirestore.getInstance()
 
+    private fun identificarCategoria(titulo: String): String {
+        val texto = titulo.lowercase()
+
+        return when {
+            "workshop" in texto || "programação" in texto -> "Programação"
+            "palestra" in texto -> "Palestra"
+            "feira" in texto -> "Feira"
+            "hackathon" in texto -> "Hackathon"
+            "acadêmica" in texto || "acadêmico" in texto -> "Acadêmico"
+            "tecnologia" in texto -> "Tecnologia"
+            else -> "Outros"
+        }
+    }
+
+
     fun salvarEventosNoFirebase(
         onSuccess: () -> Unit,
         onFailure: (Exception) -> Unit
@@ -73,7 +88,8 @@ object EventRepository {
                 "data" to evento.data,
                 "horario" to evento.horario,
                 "local" to evento.local,
-                "organizador" to evento.organizador
+                "organizador" to evento.organizador,
+                "categoria" to evento.categoria
             )
 
             batch.set(referencia, dados)
@@ -102,14 +118,18 @@ object EventRepository {
                         ?: documento.id.toIntOrNull()
                         ?: return@mapNotNull null
 
+                    val titulo = documento.getString("titulo") ?: ""
+
                     Event(
-                        id,
-                        documento.getString("titulo") ?: "",
-                        documento.getString("descricao") ?: "",
-                        documento.getString("data") ?: "",
-                        documento.getString("horario") ?: "",
-                        documento.getString("local") ?: "",
-                        documento.getString("organizador") ?: ""
+                        id = id,
+                        titulo = titulo,
+                        descricao = documento.getString("descricao") ?: "",
+                        data = documento.getString("data") ?: "",
+                        horario = documento.getString("horario") ?: "",
+                        local = documento.getString("local") ?: "",
+                        organizador = documento.getString("organizador") ?: "",
+                        categoria = documento.getString("categoria")
+                            ?: identificarCategoria(titulo)
                     )
                 }
 
@@ -135,14 +155,18 @@ object EventRepository {
                     return@addOnSuccessListener
                 }
 
+                val titulo = documento.getString("titulo") ?: ""
+
                 val evento = Event(
-                    documento.getLong("id")?.toInt() ?: id,
-                    documento.getString("titulo") ?: "",
-                    documento.getString("descricao") ?: "",
-                    documento.getString("data") ?: "",
-                    documento.getString("horario") ?: "",
-                    documento.getString("local") ?: "",
-                    documento.getString("organizador") ?: ""
+                    id = documento.getLong("id")?.toInt() ?: id,
+                    titulo = titulo,
+                    descricao = documento.getString("descricao") ?: "",
+                    data = documento.getString("data") ?: "",
+                    horario = documento.getString("horario") ?: "",
+                    local = documento.getString("local") ?: "",
+                    organizador = documento.getString("organizador") ?: "",
+                    categoria = documento.getString("categoria")
+                        ?: identificarCategoria(titulo)
                 )
 
                 onSuccess(evento)

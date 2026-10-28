@@ -166,5 +166,12 @@
             android:paddingTop="12dp"
             android:paddingBottom="12dp" />
 
+        <Button
+            android:id="@+id/btnLocalizacao"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Ver localização no mapa"
+            android:layout_marginBottom="16dp" />
+
     </LinearLayout>
 </ScrollView>

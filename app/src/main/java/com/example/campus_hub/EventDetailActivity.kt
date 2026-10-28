@@ -17,6 +17,7 @@ import java.util.Locale
 import android.widget.Spinner
 import android.widget.ArrayAdapter
 import java.util.Calendar
+import android.net.Uri
 
 class EventDetailActivity : AppCompatActivity() {
 
@@ -72,6 +73,12 @@ class EventDetailActivity : AppCompatActivity() {
 
         val notas = (1..5).map { "$it estrela${if (it > 1) "s" else ""}" }
 
+        val btnLocalizacao = findViewById<Button>(R.id.btnLocalizacao)
+
+        btnLocalizacao.setOnClickListener {
+            abrirLocalizacaoEvento()
+        }
+
         spNota.adapter = ArrayAdapter(
             this,
             android.R.layout.simple_spinner_dropdown_item,
@@ -101,6 +108,37 @@ class EventDetailActivity : AppCompatActivity() {
 
         btnFavorito.setOnClickListener {
             if (favorito) desfavoritar() else favoritar()
+        }
+    }
+
+    private fun abrirLocalizacaoEvento() {
+        val eventoAtual = evento
+
+        if (eventoAtual == null) {
+            Toast.makeText(
+                this,
+                "Evento não carregado.",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        val endereco = eventoAtual.local
+
+        val uri = Uri.parse(
+            "geo:0,0?q=${Uri.encode(endereco)}"
+        )
+
+        val intent = Intent(Intent.ACTION_VIEW, uri)
+
+        if (intent.resolveActivity(packageManager) != null) {
+            startActivity(intent)
+        } else {
+            val url = Uri.parse(
+                "https://www.google.com/maps/search/?api=1&query=${Uri.encode(endereco)}"
+            )
+
+            startActivity(Intent(Intent.ACTION_VIEW, url))
         }
     }
 

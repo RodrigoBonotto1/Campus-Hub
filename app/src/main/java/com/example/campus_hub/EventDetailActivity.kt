@@ -21,6 +21,12 @@ import android.net.Uri
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.widget.ImageView
+import android.widget.VideoView
+import android.media.MediaPlayer
+import android.media.MediaRecorder
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import androidx.activity.result.contract.ActivityResultContracts
 import java.io.File
 import java.io.FileOutputStream
@@ -59,6 +65,17 @@ class EventDetailActivity : AppCompatActivity() {
     private lateinit var btnTirarFoto: Button
     private lateinit var btnEscolherFoto: Button
     private lateinit var layoutFotos: LinearLayout
+    private lateinit var btnIniciarAudio: Button
+    private lateinit var btnPararAudio: Button
+    private lateinit var layoutAudios: LinearLayout
+    private lateinit var btnGravarVideo: Button
+    private lateinit var btnEscolherVideo: Button
+    private lateinit var layoutVideos: LinearLayout
+
+    private var gravadorAudio: MediaRecorder? = null
+    private var arquivoAudioAtual: File? = null
+    private var gravandoAudio = false
+    private var reprodutorAudio: MediaPlayer? = null
 
     private val tirarFotoLauncher =
         registerForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
@@ -68,6 +85,26 @@ class EventDetailActivity : AppCompatActivity() {
     private val escolherFotoLauncher =
         registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             if (uri != null) salvarFotoDaGaleria(uri)
+        }
+
+    private val permissaoAudioLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { concedida ->
+            if (concedida) iniciarGravacaoAudio()
+            else Toast.makeText(this, "Permissão do microfone necessária para gravar áudio.", Toast.LENGTH_LONG).show()
+        }
+
+    private val escolherVideoLauncher =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            if (uri != null) salvarVideoLocal(uri)
+        }
+
+    private val gravarVideoLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { resultado ->
+            if (resultado.resultCode == RESULT_OK) {
+                val uri = resultado.data?.data
+                if (uri != null) salvarVideoLocal(uri)
+                else Toast.makeText(this, "A câmera não retornou um vídeo.", Toast.LENGTH_SHORT).show()
+            }
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -92,6 +129,47 @@ class EventDetailActivity : AppCompatActivity() {
         btnTirarFoto = findViewById(R.id.btnTirarFoto)
         btnEscolherFoto = findViewById(R.id.btnEscolherFoto)
         layoutFotos = findViewById(R.id.layoutFotos)
+        btnIniciarAudio = findViewById(R.id.btnIniciarAudio)
+        btnPararAudio = findViewById(R.id.btnPararAudio)
+        layoutAudios = findViewById(R.id.layoutAudios)
+        btnGravarVideo = findViewById(R.id.btnGravarVideo)
+        btnEscolherVideo = findViewById(R.id.btnEscolherVideo)
+        layoutVideos = findViewById(R.id.layoutVideos)
+
+        btnPararAudio.isEnabled = false
+
+        btnIniciarAudio.setOnClickListener {
+            if (auth.currentUser == null) {
+                Toast.makeText(this, "Entre na sua conta para gravar áudios.", Toast.LENGTH_SHORT).show()
+            } else if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                iniciarGravacaoAudio()
+            } else {
+                permissaoAudioLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            }
+        }
+
+        btnPararAudio.setOnClickListener { pararGravacaoAudio() }
+
+        btnGravarVideo.setOnClickListener {
+            if (auth.currentUser == null) {
+                Toast.makeText(this, "Entre na sua conta para publicar vídeos.", Toast.LENGTH_SHORT).show()
+            } else {
+                val cameraIntent = Intent(android.provider.MediaStore.ACTION_VIDEO_CAPTURE).apply {
+                    putExtra(android.provider.MediaStore.EXTRA_DURATION_LIMIT, 60)
+                    putExtra(android.provider.MediaStore.EXTRA_VIDEO_QUALITY, 1)
+                }
+                if (cameraIntent.resolveActivity(packageManager) != null) gravarVideoLauncher.launch(cameraIntent)
+                else Toast.makeText(this, "Nenhum aplicativo de câmera disponível.", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        btnEscolherVideo.setOnClickListener {
+            if (auth.currentUser == null) {
+                Toast.makeText(this, "Entre na sua conta para publicar vídeos.", Toast.LENGTH_SHORT).show()
+            } else {
+                escolherVideoLauncher.launch("video/*")
+            }
+        }
 
         btnTirarFoto.setOnClickListener {
             if (auth.currentUser == null) {
@@ -192,6 +270,8 @@ class EventDetailActivity : AppCompatActivity() {
 
                 evento = eventoCarregado
                 carregarFotos()
+                carregarAudios()
+                carregarVideos()
                 txtTitulo.text = eventoCarregado.titulo
                 txtDescricao.text = eventoCarregado.descricao
                 txtData.text = "Data: ${eventoCarregado.data}"
@@ -679,6 +759,275 @@ class EventDetailActivity : AppCompatActivity() {
         } else {
             Toast.makeText(this, "Não foi possível excluir a foto.", Toast.LENGTH_SHORT).show()
         }
+    }
+
+
+    private fun obterPastaAudios(): File? {
+        val eventoAtual = evento ?: return null
+        val pasta = File(filesDir, "audios_eventos/${eventoAtual.id}")
+        if (!pasta.exists() && !pasta.mkdirs()) return null
+        return pasta
+    }
+
+    private fun iniciarGravacaoAudio() {
+        val pasta = obterPastaAudios()
+        if (pasta == null) {
+            Toast.makeText(this, "Não foi possível criar a pasta de áudios.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val arquivo = File(pasta, "${System.currentTimeMillis()}.m4a")
+        try {
+            gravadorAudio = MediaRecorder().apply {
+                setAudioSource(MediaRecorder.AudioSource.MIC)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                setOutputFile(arquivo.absolutePath)
+                prepare()
+                start()
+            }
+            arquivoAudioAtual = arquivo
+            gravandoAudio = true
+            btnIniciarAudio.isEnabled = false
+            btnPararAudio.isEnabled = true
+            Toast.makeText(this, "Gravação iniciada.", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            gravadorAudio?.release()
+            gravadorAudio = null
+            arquivo.delete()
+            Toast.makeText(this, "Erro ao iniciar gravação: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun pararGravacaoAudio() {
+        if (!gravandoAudio) return
+        val arquivo = arquivoAudioAtual
+        try {
+            gravadorAudio?.stop()
+            gravadorAudio?.release()
+            gravadorAudio = null
+            gravandoAudio = false
+            arquivoAudioAtual = null
+            btnIniciarAudio.isEnabled = true
+            btnPararAudio.isEnabled = false
+            if (arquivo != null && arquivo.exists() && arquivo.length() > 0) {
+                registrarAudio(arquivo)
+                Toast.makeText(this, "Áudio publicado com sucesso!", Toast.LENGTH_SHORT).show()
+            } else {
+                arquivo?.delete()
+                Toast.makeText(this, "A gravação não gerou um áudio válido.", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            gravadorAudio?.release()
+            gravadorAudio = null
+            gravandoAudio = false
+            arquivoAudioAtual = null
+            arquivo?.delete()
+            btnIniciarAudio.isEnabled = true
+            btnPararAudio.isEnabled = false
+            Toast.makeText(this, "Erro ao finalizar áudio: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun registrarAudio(arquivo: File) {
+        val usuario = auth.currentUser ?: return
+        val eventoAtual = evento ?: return
+        referenciaUsuario()?.get()
+            ?.addOnSuccessListener { documento ->
+                val nome = documento.getString("nome") ?: usuario.displayName ?: usuario.email ?: "Usuário"
+                salvarDadosAudio(arquivo, usuario.uid, nome, eventoAtual.id)
+            }
+            ?.addOnFailureListener {
+                salvarDadosAudio(arquivo, usuario.uid, usuario.displayName ?: usuario.email ?: "Usuário", eventoAtual.id)
+            }
+            ?: salvarDadosAudio(arquivo, usuario.uid, usuario.displayName ?: usuario.email ?: "Usuário", eventoAtual.id)
+    }
+
+    private fun salvarDadosAudio(arquivo: File, uid: String, nome: String, eventId: Int) {
+        val chave = "${eventId}_${arquivo.name}"
+        getSharedPreferences("audios_eventos", MODE_PRIVATE).edit()
+            .putString("${chave}_autorUid", uid)
+            .putString("${chave}_autorNome", nome)
+            .putLong("${chave}_data", System.currentTimeMillis())
+            .apply()
+        carregarAudios()
+    }
+
+    private fun carregarAudios() {
+        if (!::layoutAudios.isInitialized) return
+        val eventoAtual = evento ?: return
+        val pasta = obterPastaAudios() ?: return
+        val prefs = getSharedPreferences("audios_eventos", MODE_PRIVATE)
+        val uidAtual = auth.currentUser?.uid
+        layoutAudios.removeAllViews()
+        val arquivos = pasta.listFiles()?.filter { it.isFile && it.extension.equals("m4a", true) }
+            ?.sortedByDescending { it.lastModified() }.orEmpty()
+
+        for (arquivo in arquivos) {
+            val chave = "${eventoAtual.id}_${arquivo.name}"
+            val autorUid = prefs.getString("${chave}_autorUid", null) ?: continue
+            val nome = prefs.getString("${chave}_autorNome", "Usuário") ?: "Usuário"
+            val data = prefs.getLong("${chave}_data", arquivo.lastModified())
+            val item = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 12, 0, 16) }
+            item.addView(TextView(this).apply { text = "Publicado por: $nome"; textSize = 15f })
+            item.addView(TextView(this).apply { text = "Data: ${SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(data))}"; textSize = 12f })
+            item.addView(Button(this).apply { text = "Reproduzir áudio"; setOnClickListener { reproduzirAudio(arquivo) } })
+            if (uidAtual != null && uidAtual == autorUid) {
+                item.addView(Button(this).apply { text = "Excluir meu áudio"; setOnClickListener { excluirAudio(arquivo, chave) } })
+            }
+            layoutAudios.addView(item)
+        }
+    }
+
+    private fun reproduzirAudio(arquivo: File) {
+        try {
+            reprodutorAudio?.release()
+            reprodutorAudio = MediaPlayer().apply {
+                setDataSource(arquivo.absolutePath)
+                setOnPreparedListener { it.start() }
+                setOnCompletionListener { player -> player.release(); if (reprodutorAudio === player) reprodutorAudio = null }
+                setOnErrorListener { player, _, _ -> player.release(); if (reprodutorAudio === player) reprodutorAudio = null; Toast.makeText(this@EventDetailActivity, "Erro ao reproduzir áudio.", Toast.LENGTH_SHORT).show(); true }
+                prepareAsync()
+            }
+        } catch (e: Exception) {
+            reprodutorAudio?.release()
+            reprodutorAudio = null
+            Toast.makeText(this, "Não foi possível reproduzir o áudio: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun excluirAudio(arquivo: File, chave: String) {
+        val uid = auth.currentUser?.uid ?: return
+        val prefs = getSharedPreferences("audios_eventos", MODE_PRIVATE)
+        if (prefs.getString("${chave}_autorUid", null) != uid) {
+            Toast.makeText(this, "Você só pode excluir seus próprios áudios.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (arquivo.delete()) {
+            prefs.edit().remove("${chave}_autorUid").remove("${chave}_autorNome").remove("${chave}_data").apply()
+            carregarAudios()
+        } else Toast.makeText(this, "Não foi possível excluir o áudio.", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun obterPastaVideos(): File? {
+        val eventoAtual = evento ?: return null
+        val pasta = File(filesDir, "videos_eventos/${eventoAtual.id}")
+        if (!pasta.exists() && !pasta.mkdirs()) return null
+        return pasta
+    }
+
+    private fun salvarVideoLocal(uri: Uri) {
+        if (auth.currentUser == null) return
+        val pasta = obterPastaVideos() ?: run {
+            Toast.makeText(this, "Não foi possível criar a pasta de vídeos.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val arquivo = File(pasta, "${System.currentTimeMillis()}.mp4")
+        try {
+            val copiado = contentResolver.openInputStream(uri)?.use { entrada ->
+                arquivo.outputStream().use { saida -> entrada.copyTo(saida) }
+            } ?: throw Exception("Não foi possível abrir o vídeo selecionado.")
+            if (copiado <= 0L) throw Exception("O arquivo de vídeo está vazio.")
+            registrarVideo(arquivo)
+            Toast.makeText(this, "Vídeo publicado com sucesso!", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            arquivo.delete()
+            Toast.makeText(this, "Erro ao importar vídeo: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun registrarVideo(arquivo: File) {
+        val usuario = auth.currentUser ?: return
+        val eventoAtual = evento ?: return
+        referenciaUsuario()?.get()
+            ?.addOnSuccessListener { documento ->
+                val nome = documento.getString("nome") ?: usuario.displayName ?: usuario.email ?: "Usuário"
+                salvarDadosVideo(arquivo, usuario.uid, nome, eventoAtual.id)
+            }
+            ?.addOnFailureListener {
+                salvarDadosVideo(arquivo, usuario.uid, usuario.displayName ?: usuario.email ?: "Usuário", eventoAtual.id)
+            }
+            ?: salvarDadosVideo(arquivo, usuario.uid, usuario.displayName ?: usuario.email ?: "Usuário", eventoAtual.id)
+    }
+
+    private fun salvarDadosVideo(arquivo: File, uid: String, nome: String, eventId: Int) {
+        val chave = "${eventId}_${arquivo.name}"
+        getSharedPreferences("videos_eventos", MODE_PRIVATE).edit()
+            .putString("${chave}_autorUid", uid)
+            .putString("${chave}_autorNome", nome)
+            .putLong("${chave}_data", System.currentTimeMillis())
+            .apply()
+        carregarVideos()
+    }
+
+    private fun carregarVideos() {
+        if (!::layoutVideos.isInitialized) return
+        val eventoAtual = evento ?: return
+        val pasta = obterPastaVideos() ?: return
+        val prefs = getSharedPreferences("videos_eventos", MODE_PRIVATE)
+        val uidAtual = auth.currentUser?.uid
+        layoutVideos.removeAllViews()
+        val arquivos = pasta.listFiles()?.filter { it.isFile && it.extension.equals("mp4", true) }
+            ?.sortedByDescending { it.lastModified() }.orEmpty()
+        for (arquivo in arquivos) {
+            val chave = "${eventoAtual.id}_${arquivo.name}"
+            val autorUid = prefs.getString("${chave}_autorUid", null) ?: continue
+            val nome = prefs.getString("${chave}_autorNome", "Usuário") ?: "Usuário"
+            val data = prefs.getLong("${chave}_data", arquivo.lastModified())
+            val item = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 12, 0, 16) }
+            item.addView(TextView(this).apply { text = "Publicado por: $nome"; textSize = 15f })
+            item.addView(TextView(this).apply { text = "Data: ${SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(data))}"; textSize = 12f })
+            item.addView(Button(this).apply { text = "Assistir vídeo"; setOnClickListener { reproduzirVideo(arquivo) } })
+            if (uidAtual != null && uidAtual == autorUid) {
+                item.addView(Button(this).apply { text = "Excluir meu vídeo"; setOnClickListener { excluirVideo(arquivo, chave) } })
+            }
+            layoutVideos.addView(item)
+        }
+    }
+
+    private fun reproduzirVideo(arquivo: File) {
+        val videoView = VideoView(this)
+        val dialog = android.app.AlertDialog.Builder(this)
+            .setTitle("Vídeo do evento")
+            .setView(videoView)
+            .setPositiveButton("Fechar") { _, _ -> videoView.stopPlayback() }
+            .create()
+        videoView.setVideoURI(Uri.fromFile(arquivo))
+        videoView.setOnPreparedListener { player ->
+            player.isLooping = false
+            videoView.start()
+        }
+        videoView.setOnErrorListener { _, _, _ ->
+            Toast.makeText(this, "Não foi possível reproduzir este vídeo.", Toast.LENGTH_SHORT).show()
+            dialog.dismiss()
+            true
+        }
+        dialog.setOnDismissListener { videoView.stopPlayback() }
+        dialog.show()
+    }
+
+    private fun excluirVideo(arquivo: File, chave: String) {
+        val uid = auth.currentUser?.uid ?: return
+        val prefs = getSharedPreferences("videos_eventos", MODE_PRIVATE)
+        if (prefs.getString("${chave}_autorUid", null) != uid) {
+            Toast.makeText(this, "Você só pode excluir seus próprios vídeos.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (arquivo.delete()) {
+            prefs.edit().remove("${chave}_autorUid").remove("${chave}_autorNome").remove("${chave}_data").apply()
+            carregarVideos()
+        } else Toast.makeText(this, "Não foi possível excluir o vídeo.", Toast.LENGTH_SHORT).show()
+    }
+
+    override fun onDestroy() {
+        if (gravandoAudio) {
+            try { gravadorAudio?.stop() } catch (_: Exception) { }
+        }
+        gravadorAudio?.release()
+        gravadorAudio = null
+        reprodutorAudio?.release()
+        reprodutorAudio = null
+        super.onDestroy()
     }
 
     private fun eventoEncerrado(): Boolean {

@@ -187,15 +187,6 @@
             android:layout_marginTop="8dp"
             android:layout_marginBottom="16dp"/>
 
-        <TextView
-            android:id="@+id/txtMediaAvaliacoes"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Carregando avaliações..."
-            android:textSize="16sp"
-            android:paddingTop="12dp"
-            android:paddingBottom="12dp" />
-
         <Button
             android:id="@+id/btnLocalizacao"
             android:layout_width="match_parent"
@@ -203,34 +194,60 @@
             android:text="Ver localização no mapa"
             android:layout_marginBottom="16dp" />
         <TextView
-            android:id="@+id/txtTituloFotos"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Fotos do evento"
+            android:text="Áudios do evento"
             android:textSize="20sp"
             android:textStyle="bold"
             android:layout_marginTop="24dp"
             android:layout_marginBottom="12dp" />
 
         <Button
-            android:id="@+id/btnTirarFoto"
+            android:id="@+id/btnIniciarAudio"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Tirar foto" />
+            android:text="Iniciar gravação" />
 
         <Button
-            android:id="@+id/btnEscolherFoto"
+            android:id="@+id/btnPararAudio"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Escolher foto da galeria"
+            android:text="Parar gravação"
+            android:enabled="false"
             android:layout_marginTop="8dp" />
 
         <LinearLayout
-            android:id="@+id/layoutFotos"
+            android:id="@+id/layoutAudios"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:layout_marginTop="16dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Vídeos do evento"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginTop="24dp" />
+
+        <Button
+            android:id="@+id/btnGravarVideo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Gravar vídeo" />
+
+        <Button
+            android:id="@+id/btnEscolherVideo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Escolher vídeo" />
+
+        <LinearLayout
+            android:id="@+id/layoutVideos"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
 
     </LinearLayout>
 </ScrollView>

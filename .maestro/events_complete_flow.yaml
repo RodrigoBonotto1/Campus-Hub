@@ -1,0 +1,40 @@
+appId: com.example.campus_hub
+
+---
+- launchApp:
+    clearState: true
+
+- tapOn: "Entrar"
+
+- assertVisible: "Login"
+
+- tapOn:
+    id: "edtEmail"
+
+- inputText: "Rodrigo@Bonotto.com"
+
+- tapOn:
+    id: "edtSenha"
+
+- inputText: "123456"
+
+- tapOn:
+    id: "btnEntrar"
+
+- assertVisible: "Bem-vindo ao CampusHub"
+
+- tapOn: "Eventos"
+
+- assertVisible: "Semana Acadêmica de Tecnologia"
+
+- tapOn: "VER DETALHES"
+
+- assertVisible: "Semana Acadêmica de Tecnologia"
+
+- tapOn: "Inscrever-se"
+
+- assertVisible: "Cancelar inscrição"
+
+- tapOn: "Cancelar inscrição"
+
+- assertVisible: "Inscrever-se"

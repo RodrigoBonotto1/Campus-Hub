@@ -1,0 +1,49 @@
+appId: com.example.campus_hub
+
+---
+- launchApp:
+    clearState: true
+
+- tapOn: "Criar conta"
+
+- assertVisible: "Criar conta"
+
+- tapOn:
+    id: "edtNome"
+
+- inputText: "Usuario Teste"
+
+- tapOn:
+    id: "edtEmail"
+
+- inputText: "testuser@campus.com"
+
+- tapOn:
+    id: "edtSenha"
+
+- inputText: "123456"
+
+- tapOn:
+    id: "edtConfirmarSenha"
+
+- inputText: "123456"
+
+- tapOn:
+    id: "btnCadastrar"
+
+- assertVisible: "Entrar"
+
+- tapOn:
+    id: "edtEmail"
+
+- inputText: "testuser@campus.com"
+
+- tapOn:
+    id: "edtSenha"
+
+- inputText: "123456"
+
+- tapOn:
+    id: "btnEntrar"
+
+- assertVisible: "Bem-vindo ao CampusHub"

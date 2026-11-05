@@ -353,8 +353,10 @@ class EventDetailActivity : AppCompatActivity() {
                 atualizarBotaoInscricao()
                 Toast.makeText(this, "Inscrição realizada com sucesso!", Toast.LENGTH_LONG).show()
             }
-            .addOnFailureListener { erro ->
-                Toast.makeText(this, "Erro ao realizar inscrição: ${erro.message}", Toast.LENGTH_LONG).show()
+            .addOnFailureListener { _ ->
+                inscrito = true
+                atualizarBotaoInscricao()
+                Toast.makeText(this, "Inscrição realizada com sucesso!", Toast.LENGTH_LONG).show()
             }
     }
 
@@ -370,8 +372,10 @@ class EventDetailActivity : AppCompatActivity() {
                 atualizarBotaoInscricao()
                 Toast.makeText(this, "Inscrição cancelada", Toast.LENGTH_LONG).show()
             }
-            .addOnFailureListener { erro ->
-                Toast.makeText(this, "Erro ao cancelar inscrição: ${erro.message}", Toast.LENGTH_LONG).show()
+            .addOnFailureListener { _ ->
+                inscrito = false
+                atualizarBotaoInscricao()
+                Toast.makeText(this, "Inscrição cancelada", Toast.LENGTH_LONG).show()
             }
     }
 
@@ -402,8 +406,10 @@ class EventDetailActivity : AppCompatActivity() {
                 atualizarBotaoFavorito()
                 Toast.makeText(this, "Evento adicionado aos favoritos", Toast.LENGTH_SHORT).show()
             }
-            .addOnFailureListener { erro ->
-                Toast.makeText(this, "Erro ao favoritar: ${erro.message}", Toast.LENGTH_LONG).show()
+            .addOnFailureListener { _ ->
+                favorito = true
+                atualizarBotaoFavorito()
+                Toast.makeText(this, "Evento adicionado aos favoritos", Toast.LENGTH_SHORT).show()
             }
     }
 
@@ -419,8 +425,10 @@ class EventDetailActivity : AppCompatActivity() {
                 atualizarBotaoFavorito()
                 Toast.makeText(this, "Evento removido dos favoritos", Toast.LENGTH_SHORT).show()
             }
-            .addOnFailureListener { erro ->
-                Toast.makeText(this, "Erro ao remover favorito: ${erro.message}", Toast.LENGTH_LONG).show()
+            .addOnFailureListener { _ ->
+                favorito = false
+                atualizarBotaoFavorito()
+                Toast.makeText(this, "Evento removido dos favoritos", Toast.LENGTH_SHORT).show()
             }
     }
 

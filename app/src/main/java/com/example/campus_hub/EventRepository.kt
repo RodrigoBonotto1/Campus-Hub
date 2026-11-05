@@ -9,7 +9,7 @@ object EventRepository {
             1,
             "Semana Acadêmica de Tecnologia",
             "Evento com palestras, oficinas e atividades relacionadas à tecnologia e inovação.",
-            "15/10/2026",
+            "15/12/2026",
             "19:00",
             "Auditório Central",
             "Departamento de Tecnologia"
@@ -18,7 +18,7 @@ object EventRepository {
             2,
             "Workshop de Programação",
             "Workshop prático sobre desenvolvimento de aplicações utilizando programação moderna.",
-            "18/10/2026",
+            "18/12/2026",
             "14:00",
             "Laboratório de Informática 01",
             "Curso de Computação"
@@ -27,7 +27,7 @@ object EventRepository {
             3,
             "Palestra sobre Inteligência Artificial",
             "Palestra sobre aplicações, oportunidades e desafios da Inteligência Artificial.",
-            "22/10/2026",
+            "22/12/2026",
             "19:30",
             "Auditório Principal",
             "Universidade"
@@ -36,7 +36,7 @@ object EventRepository {
             4,
             "Feira de Projetos Acadêmicos",
             "Apresentação de projetos desenvolvidos pelos alunos da universidade.",
-            "25/10/2026",
+            "25/12/2026",
             "09:00",
             "Centro de Eventos",
             "Universidade"
@@ -45,7 +45,7 @@ object EventRepository {
             5,
             "Hackathon CampusHub",
             "Competição de desenvolvimento de soluções tecnológicas em equipe.",
-            "30/10/2026",
+            "30/12/2026",
             "08:00",
             "Laboratório de Tecnologia",
             "Núcleo de Inovação"
@@ -133,10 +133,14 @@ object EventRepository {
                     )
                 }
 
-                onSuccess(lista)
+                if (lista.isNotEmpty()) {
+                    onSuccess(lista)
+                } else {
+                    onSuccess(eventos)
+                }
             }
-            .addOnFailureListener { erro ->
-                onFailure(erro)
+            .addOnFailureListener { _ ->
+                onSuccess(eventos)
             }
     }
 
@@ -151,7 +155,7 @@ object EventRepository {
             .addOnSuccessListener { documento ->
 
                 if (!documento.exists()) {
-                    onSuccess(null)
+                    onSuccess(eventos.find { it.id == id })
                     return@addOnSuccessListener
                 }
 
@@ -171,8 +175,8 @@ object EventRepository {
 
                 onSuccess(evento)
             }
-            .addOnFailureListener { erro ->
-                onFailure(erro)
+            .addOnFailureListener { _ ->
+                onSuccess(eventos.find { it.id == id })
             }
     }
 }
